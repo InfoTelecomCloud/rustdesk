@@ -1,0 +1,41 @@
+name: Build Custom RustDesk Client (Windows)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+  RELAY_SERVER: ${{ secrets.RELAY_SERVER }}
+  RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Set custom server config
+      run: |
+        echo "pub const SERVER_PUBLIC_KEY: &str = \"${env:PUBLIC_KEY}\";" > src/platform/tray/windows/public_key.rs
+        echo "pub const RENDEZVOUS_SERVER: &str = \"${env:RENDEZVOUS_SERVER}\";" > src/platform/tray/windows/rendezvous.rs
+        echo "pub const RELAY_SERVER: &str = \"${env:RELAY_SERVER}\";" > src/platform/tray/windows/relay.rs
+
+    - name: Build release
+      run: cargo build --release
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: rustdesk-windows-client
+        path: target/release/*.exe
